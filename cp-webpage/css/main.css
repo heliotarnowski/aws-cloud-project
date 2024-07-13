@@ -1,0 +1,18 @@
+.container {
+    /* border: 2px solid #000; /* Example: 2px solid black border */
+    width: 90%; /* Example: 80% of the parent container width */
+}
+.image-column {
+    flex: 1; /* Takes up 1 portion of the container */
+}
+.text-column {
+    flex: 2; /* Takes up 2 portions of the container, making it larger than the image column */
+    padding: 20px; /* Add some padding around the text */
+}
+img {
+    max-width: 100%; /* Make sure the image is responsive and fits its container */
+    height: auto; /* Maintain aspect ratio */
+}
+.border-right {
+    border-right: 1px solid #ccc; /* Adjust color as needed */
+}
