@@ -46,6 +46,7 @@ var Project = window.Project || {};
                 } else {
                     resolve(session.getIdToken().getJwtToken());
                     jwtToken = session.getIdToken().getJwtToken();
+                    localStorage.setItem('jwtToken', jwtToken);
                 }
             });
         } else {
