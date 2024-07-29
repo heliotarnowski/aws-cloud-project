@@ -21,7 +21,19 @@
             var signOutButton = document.getElementById('signOutButton');
             if (signOutButton) {
                 signOutButton.addEventListener('click', signOut);
-            }
+            };
+
+            //print the local storage token
+            var token = localStorage.getItem('jwtToken');
+            //console.log(token);
+            //document.getElementById('tokenDisplay').innerText = token;          
+
+            // Select the textarea by its ID
+            var textarea = document.getElementById('authtokenTextarea');
+
+            // Set the value of the textarea to tokenDisplay
+            textarea.value = token;
+            
         });
       
     </script>
@@ -29,7 +41,8 @@
     <script>
         async function callApi() {
             Project.authToken.then(function(jwtToken) {
-            if (jwtToken) {
+            if (jwtToken) {        
+                //localStorage.setItem("jwtToken", jwtToken);
                 // Make API request with the JWT token
                 fetch('https://2n037jkusl.execute-api.us-east-1.amazonaws.com/dev/userdata', {
                     method: 'GET',
@@ -65,7 +78,44 @@
         document.addEventListener('DOMContentLoaded', (event) => {
             document.getElementById('callApiButton').addEventListener('click', callApi);
         });
+
     </script>
+
+<script>
+document.addEventListener('DOMContentLoaded', (event) => {
+    const userPool = new AmazonCognitoIdentity.CognitoUserPool({
+        UserPoolId: _config.cognito.userPoolId,
+        ClientId: _config.cognito.userPoolClientId
+    });
+
+    const cognitoUser = userPool.getCurrentUser();
+
+    if (cognitoUser != null) {
+        cognitoUser.getSession(function(err, session) {
+            if (err) {
+                console.error(err);
+                return;
+            }
+
+            // Session is valid
+            cognitoUser.getUserAttributes(function(err, attributes) {
+                if (err) {
+                    console.error(err);
+                    return;
+                }
+
+                const emailAttribute = attributes.find(attribute => attribute.getName() === 'email');
+                if (emailAttribute) {
+                    document.getElementById('userEmailDisplay').innerText = emailAttribute.getValue();
+                }
+            });
+        });
+    } else {
+        console.log('No user logged in.');
+    }
+});
+</script>
+    
 
 </head>
 
@@ -76,8 +126,10 @@
         <div class="row">
             <div class="col-md-6 text-left">
                 <h3>Welcome to AWS Cloud Project!</h3>
+                <div id="userEmailDisplay">User email will be displayed here</div>              
             </div>
             <div class="col-md-6 text-right">
+                <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#authTokenModal">Show Auth Token</button>
                 <button id="signOutButton" class="btn btn-warning">Sign Out</button>               
             </div>
         </div>
@@ -92,7 +144,9 @@
                     <h4 class="modal-title" id="myModalLabel">Your Auth Token</h4>
                 </div>
                 <div class="modal-body">
-                    <textarea class="authToken"></textarea>
+                    <p>Copy and paste this token to use in your API requests.</p>
+                    <p>You must use this token in the <b>Authorization</b> header.</p>                                            
+                    <textarea id="authtokenTextarea"></textarea>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
@@ -107,7 +161,7 @@
         <h1 style="color: rgb(0, 0, 0); font-size: 24px;">API Gateway + Lambda + DynamoDB</h1>
         <p style="color: rgb(0, 0, 0); font-size: 16px;">This is a simple web page that demonstrates how to call an API Gateway endpoint that is integrated with a Lambda function and DynamoDB table.</p>
         <p style="color: rgb(0, 0, 0); font-size: 16px;">Click the "Call API" button to make a request to the API Gateway endpoint. The response will be displayed below.</p>
-        <p style="color: rgb(0, 0, 0); font-size: 16px;">Link to the article <a href="https://example.com"> here </a></p>
+        <p style="color: rgb(0, 0, 0); font-size: 16px;">Link to the article <a href="https://medium.com/@helio.tarnowski/aws-s3-static-page-api-gateway-lambda-dynamodb-a73a65bc6b72"> here </a></p>
     </div>
     
     <div class="container">
@@ -116,8 +170,25 @@
                 <img src="diagrams/modulo1.jpg" alt="Image">
             </div>
             <div class="col-md-6">
+                <h3>Create a new product</h3>
+                <p>Fill out the form below to submit a product to the DynamoDB table.</p>   
+                <p>Example: Product: Apple, Color: Red, Price: 1.00</p>
+                <p>4 seconds after Submit, the form fields will be cleared and the success message will be removed</p>
+                <p>Click the List Products button to view all products.</p>
+                <form id="productForm">
+                    <label for="productName">Product:</label>
+                    <input type="text" id="productName" name="productName" required>
+                
+                    <label for="productColor">Color:</label>
+                    <input type="text" id="productColor" name="productColor" required>
+                
+                    <label for="productPrice">Price:</label>
+                    <input type="text" id="productPrice" name="productPrice" required>
+                    <input type="submit" value="Save" class="btn btn-primary">
+                    <div id="responseMessage"></div>
+                </form>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" id="callApiButton">Call API</button>
+                    <button type="button" class="btn btn-primary" id="callApiButton">List Products</button>
                 </div>
                 <div id="apiResponse">API response will be shown here!</div>
             </div>
@@ -127,5 +198,53 @@
     <hr>
 
 </body>
+
+<script>
+    document.getElementById('productForm').addEventListener('submit', function(event) {
+        event.preventDefault(); // Prevent the default form submission
+    
+        const jwtToken = localStorage.getItem('jwtToken');
+        // Collect form data
+        const formData = {
+            emailUser: document.getElementById('userEmailDisplay').innerText,
+            productName: document.getElementById('productName').value,
+            productColor: document.getElementById('productColor').value,
+            productPrice: document.getElementById('productPrice').value
+        };
+        // Send a POST request to your API endpoint
+        fetch('https://2n037jkusl.execute-api.us-east-1.amazonaws.com/dev/products', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': jwtToken,
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Success:', data);
+            // Handle success (e.g., display a success message)
+            const responseElement = document.getElementById('responseMessage');
+            responseElement.innerText = `Success: ${JSON.stringify(data)}`;
+            responseElement.className = 'success-message'; // Add the success-message class
+
+                // Clear the form fields 2 seconds after submission
+            setTimeout(() => {
+                document.getElementById('productName').value = '';
+                document.getElementById('productColor').value = '';
+                document.getElementById('productPrice').value = '';
+                const responseElement = document.getElementById('responseMessage');
+                responseElement.innerText = '';
+                responseElement.className = ''; // Optionally reset the class if needed
+            }, 4000); // 2000 milliseconds = 2 seconds
+
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            // Handle errors (e.g., display an error message)
+            document.getElementById('responseMessage').innerText = `Error: ${error}`;
+        });
+    });
+    </script>
 
 </html>
